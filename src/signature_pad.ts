@@ -28,6 +28,7 @@ export interface Options {
   penColor?: string;
   throttle?: number;
   velocityFilterWeight?: number;
+  android?: boolean;
   onBegin?: (event: MouseEvent | Touch) => void;
   onEnd?: (event: MouseEvent | Touch) => void;
 }
@@ -60,6 +61,8 @@ export default class SignaturePad {
   private _lastVelocity: number;
   private _lastWidth: number;
   private _strokeMoveUpdate: (event: MouseEvent | Touch) => void;
+  private _isAndroid: boolean;
+  private _updatingInterval: any;
   /* tslint:enable: variable-name */
 
   constructor(
@@ -82,6 +85,7 @@ export default class SignaturePad {
     this.backgroundColor = options.backgroundColor || 'rgba(0,0,0,0)';
     this.onBegin = options.onBegin;
     this.onEnd = options.onEnd;
+    this._isAndroid = options.android || false;
 
     this._strokeMoveUpdate = this.throttle
       ? throttle(SignaturePad.prototype._strokeUpdate, this.throttle)
@@ -270,6 +274,12 @@ export default class SignaturePad {
     this._data.push(newPointGroup);
     this._reset();
     this._strokeUpdate(event);
+
+    if ((this._updatingInterval === undefined) && this._isAndroid) {
+      this._updatingInterval = setInterval(() => {
+        this.canvas.style.overflow = (this.canvas.style.overflow === 'visible') ? 'hidden' : 'visible';
+      }, 50);
+    }
   }
 
   private _strokeUpdate(event: MouseEvent | Touch): void {
@@ -316,6 +326,12 @@ export default class SignaturePad {
 
     if (typeof this.onEnd === 'function') {
       this.onEnd(event);
+    }
+
+    if (this._updatingInterval !== undefined) {
+      clearInterval(this._updatingInterval);
+      delete this._updatingInterval;
+      this.canvas.style.overflow = (this.canvas.style.overflow === 'visible') ? 'hidden' : 'visible';
     }
   }
 
